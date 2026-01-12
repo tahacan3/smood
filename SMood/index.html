@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SMood</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SMood">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
+
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+
+    <style>
+        :root { --iyi: #2ecc71; --normal: #f1c40f; --kotu: #e74c3c; }
+        body { font-family: -apple-system, sans-serif; background: #fdfdfd; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        h1 { font-weight: 700; color: #2d3436; margin-bottom: 50px; letter-spacing: -1px; }
+        .btn-container { display: flex; flex-direction: column; gap: 20px; width: 85%; max-width: 350px; }
+        .btn { padding: 30px; border: none; border-radius: 25px; font-size: 24px; font-weight: bold; color: white; cursor: pointer; transition: 0.2s; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .btn:active { transform: scale(0.92); box-shadow: 0 5px 10px rgba(0,0,0,0.15); }
+        .iyi { background: var(--iyi); }
+        .normal { background: var(--normal); color: #2d3436; }
+        .kotu { background: var(--kotu); }
+        #status { margin-top: 30px; font-size: 14px; color: #a4b0be; font-weight: 500; }
+    </style>
+</head>
+<body>
+
+    <h1>SMood</h1>
+
+    <div class="btn-container">
+        <button class="btn iyi" onclick="moodKaydet('İyi 😊')">İyi</button>
+        <button class="btn normal" onclick="moodKaydet('Normal 😐')">Normal</button>
+        <button class="btn kotu" onclick="moodKaydet('Kötü 😔')">Kötü</button>
+    </div>
+
+    <p id="status">Bugün nasıl hissediyorsun?</p>
+
+    <script>
+        // Senin Firebase Bilgilerin
+        const firebaseConfig = {
+            apiKey: "AIzaSyBdgJMWisTr5wlpzPmX8U5v4mDY4Gp5lvo",
+            authDomain: "smood-fcef3.firebaseapp.com",
+            projectId: "smood-fcef3",
+            storageBucket: "smood-fcef3.firebasestorage.app",
+            messagingSenderId: "481885978202",
+            appId: "1:481885978202:web:5cd2527d3b2aaa5a416263"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        async function moodKaydet(deger) {
+            const label = document.getElementById('status');
+            label.innerText = "Kaydediliyor...";
+            
+            const ntfyKanal = "smood_bildirim_kanali"; // Android ntfy uygulamasında bu isme abone ol
+            const tarih = new Date().toLocaleString('tr-TR');
+
+            try {
+                // 1. Firebase'e Veriyi Yaz
+                await db.ref('kayitlar/').push({
+                    mood: deger,
+                    tarih: tarih,
+                    timestamp: Date.now()
+                });
+
+                // 2. Android'e Bildirim Gönder (ntfy.sh)
+                await fetch(`https://ntfy.sh/${ntfyKanal}`, {
+                    method: 'POST',
+                    body: `SMood Güncellemesi: ${deger}\nSaat: ${tarih}`,
+                    headers: { 'Title': 'SMood Bildirimi', 'Tags': 'heart_eyes' }
+                });
+
+                label.innerText = "Başarıyla kaydedildi!";
+                setTimeout(() => label.innerText = "Bugün nasıl hissediyorsun?", 3000);
+                
+                if (navigator.vibrate) navigator.vibrate(100); // Dokunsal geri bildirim
+
+            } catch (error) {
+                label.innerText = "Hata oluştu, tekrar dene.";
+                console.error(error);
+            }
+        }
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>
