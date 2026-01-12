@@ -108,17 +108,39 @@
             const statusLabel = document.getElementById('status');
             statusLabel.innerText = "Gönderiliyor...";
             const tarih = new Date().toLocaleString('tr-TR');
+            
+            const ntfyKanal = "SMood_2026"; 
 
             try {
-                await db.ref('moodlar/').push({ durum: mod, zaman: tarih, timestamp: Date.now() });
-                fetch('https://ntfy.sh/SMood', { 
-                    method: 'POST', 
-                    body: mod, 
-                    headers: { 'Title': 'Sevdiğinden Haber Var!', 'Tags': 'heart' } 
+                // 1. Firebase'e Kaydet
+                await db.ref('moodlar/').push({ 
+                    durum: mod, 
+                    zaman: tarih, 
+                    timestamp: Date.now() 
                 });
-                statusLabel.innerText = "İletildi! ❤️";
+
+                // 2. ntfy.sh Bildirimi (Başına 'await' ekledik)
+                const res = await fetch(`https://ntfy.sh/${ntfyKanal}`, { 
+                    method: 'POST', 
+                    body: `Mesaj: ${mod}`, 
+                    headers: { 
+                        'Title': 'SMood Mesaji', 
+                        'Tags': 'heart' 
+                    } 
+                });
+
+                if (res.ok) {
+                    statusLabel.innerText = "Ona iletildi! ❤️";
+                } else {
+                    statusLabel.innerText = "Bildirim sunucu hatası!";
+                }
+
                 setTimeout(() => statusLabel.innerText = "Bağlantı aktif.", 2000);
-            } catch (e) { statusLabel.innerText = "Hata!"; }
+            } catch (e) { 
+                console.error("Hata detayı:", e);
+                statusLabel.innerText = "Hata oluştu!"; 
+                alert("Bağlantı Hatası: " + e.message); 
+            }
         }
 
         async function kayitSil(id) {
