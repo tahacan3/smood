@@ -3,47 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SMood</title>
+    <title>SMood Pro</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="SMood">
-    <link rel="apple-touch-icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
 
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 
     <style>
-        :root { --iyi: #2ecc71; --normal: #f1c40f; --kotu: #e74c3c; }
-        body { font-family: -apple-system, sans-serif; background: #fdfdfd; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        h1 { font-weight: 700; color: #2d3436; margin-bottom: 50px; letter-spacing: -1px; }
-        .btn-container { display: flex; flex-direction: column; gap: 20px; width: 85%; max-width: 350px; }
-        .btn { padding: 30px; border: none; border-radius: 25px; font-size: 24px; font-weight: bold; color: white; cursor: pointer; transition: 0.2s; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-        .btn:active { transform: scale(0.92); box-shadow: 0 5px 10px rgba(0,0,0,0.15); }
-        .iyi { background: var(--iyi); }
-        .normal { background: var(--normal); color: #2d3436; }
-        .kotu { background: var(--kotu); }
-        #status { margin-top: 30px; font-size: 14px; color: #a4b0be; font-weight: 500; }
+        :root { --primary: #6c5ce7; }
+        body { font-family: -apple-system, sans-serif; background: #f9f9fb; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        h1 { color: var(--primary); margin-top: 40px; font-weight: 800; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 400px; margin-bottom: 30px; }
+        .btn { padding: 25px; border: none; border-radius: 18px; font-size: 16px; font-weight: bold; color: white; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .btn:active { transform: scale(0.95); }
+        .harika { background: #00b894; }
+        .iyi { background: #55efc4; color: #2d3436; }
+        .normal { background: #ffeaa7; color: #2d3436; }
+        .yorgun { background: #fab1a0; color: #2d3436; }
+        .uzgun { background: #74b9ff; }
+        .kotu { background: #ff7675; }
+        
+        .history { width: 100%; max-width: 400px; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .history h2 { font-size: 18px; color: #2d3436; margin: 0 0 15px 0; }
+        
+        /* Filtreleme Bölümü */
+        .filter-section { margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .filter-section label { font-size: 14px; color: #666; }
+        input[type="date"] { padding: 10px; border-radius: 10px; border: 1px solid #ddd; font-family: inherit; font-size: 16px; }
+
+        .history-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f9f9f9; font-size: 14px; }
+        .history-item:last-child { border: none; }
+        #status { font-size: 12px; color: #aaa; margin-bottom: 15px; }
+        .no-data { text-align: center; color: #ccc; padding: 20px; font-style: italic; }
     </style>
 </head>
 <body>
 
     <h1>SMood</h1>
+    <p id="status">Bağlanıyor...</p>
 
-    <div class="btn-container">
-        <button class="btn iyi" onclick="moodKaydet('İyi 😊')">İyi</button>
-        <button class="btn normal" onclick="moodKaydet('Normal 😐')">Normal</button>
-        <button class="btn kotu" onclick="moodKaydet('Kötü 😔')">Kötü</button>
+    <div class="grid">
+        <button class="btn harika" onclick="kaydet('Harika 🤩')">Harika</button>
+        <button class="btn iyi" onclick="kaydet('İyi 😊')">İyi</button>
+        <button class="btn normal" onclick="kaydet('Normal 😐')">Normal</button>
+        <button class="btn yorgun" onclick="kaydet('Yorgun 😴')">Yorgun</button>
+        <button class="btn uzgun" onclick="kaydet('Üzgün 😢')">Üzgün</button>
+        <button class="btn kotu" onclick="kaydet('Kötü 😔')">Kötü</button>
     </div>
 
-    <p id="status">Bugün nasıl hissediyorsun?</p>
+    <div class="history">
+        <div class="filter-section">
+            <label for="dateFilter">Tarihe Göre Bak:</label>
+            <input type="date" id="dateFilter" onchange="tariheGoreGetir(this.value)">
+        </div>
+        
+        <h2 id="listTitle">Son Kayıtlar</h2>
+        <div id="history-list"></div>
+    </div>
 
     <script>
-        // Senin Firebase Bilgilerin
         const firebaseConfig = {
             apiKey: "AIzaSyBdgJMWisTr5wlpzPmX8U5v4mDY4Gp5lvo",
             authDomain: "smood-fcef3.firebaseapp.com",
+            databaseURL: "https://smood-fcef3-default-rtdb.europe-west1.firebasedatabase.app/",
             projectId: "smood-fcef3",
             storageBucket: "smood-fcef3.firebasestorage.app",
             messagingSenderId: "481885978202",
@@ -53,42 +79,98 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        async function moodKaydet(deger) {
-            const label = document.getElementById('status');
-            label.innerText = "Kaydediliyor...";
-            
-            const ntfyKanal = "SMood"; // Android ntfy uygulamasında bu isme abone ol
+        // Aktif dinleyiciyi takip etmek için değişken
+        let activeRef = null;
+
+        // 1. Kaydetme Fonksiyonu (Aynı kalıyor)
+        async function kaydet(mod) {
+            const statusLabel = document.getElementById('status');
+            statusLabel.innerText = "Kaydediliyor...";
             const tarih = new Date().toLocaleString('tr-TR');
 
             try {
-                // 1. Firebase'e Veriyi Yaz
-                await db.ref('kayitlar/').push({
-                    mood: deger,
-                    tarih: tarih,
+                await db.ref('moodlar/').push({
+                    durum: mod,
+                    zaman: tarih,
                     timestamp: Date.now()
                 });
 
-                // 2. Android'e Bildirim Gönder (ntfy.sh)
-                await fetch(`https://ntfy.sh/${ntfyKanal}`, {
+                fetch(`https://ntfy.sh/SMood`, {
                     method: 'POST',
-                    body: `SMood Güncellemesi: ${deger}\nSaat: ${tarih}`,
-                    headers: { 'Title': 'SMood Bildirimi', 'Tags': 'heart_eyes' }
+                    body: `Mood: ${mod}`,
+                    headers: { 'Title': 'SMood', 'Tags': 'heart_eyes' }
                 });
 
-                label.innerText = "Başarıyla kaydedildi!";
-                setTimeout(() => label.innerText = "Bugün nasıl hissediyorsun?", 3000);
-                
-                if (navigator.vibrate) navigator.vibrate(100); // Dokunsal geri bildirim
-
-            } catch (error) {
-                label.innerText = "Hata oluştu, tekrar dene.";
-                console.error(error);
+                statusLabel.innerText = "Kaydedildi!";
+                setTimeout(() => statusLabel.innerText = "Senkronize edildi.", 2000);
+            } catch (e) {
+                statusLabel.innerText = "Hata!";
             }
         }
 
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+        // 2. Merkezi Dinleyici Başlatma Fonksiyonu
+        function dinleyiciBaslat(ref, title) {
+            // Eğer halihazırda bir dinleyici varsa onu kapat (Çakışmayı önlemek için)
+            if (activeRef) activeRef.off(); 
+
+            activeRef = ref; // Yeni referansı kaydet
+
+            activeRef.on('value', (snapshot) => {
+                renderList(snapshot, title);
+            });
         }
+
+        // 3. Tarihe Göre Filtreleme (Artık Canlı!)
+        function tariheGoreGetir(secilenTarih) {
+            if (!secilenTarih) {
+                varsayilanYukle();
+                return;
+            }
+
+            const startOfDay = new Date(secilenTarih).setHours(0, 0, 0, 0);
+            const endOfDay = new Date(secilenTarih).setHours(23, 59, 59, 999);
+
+            // Seçilen tarih aralığını CANLI dinle
+            const query = db.ref('moodlar/')
+                            .orderByChild('timestamp')
+                            .startAt(startOfDay)
+                            .endAt(endOfDay);
+
+            dinleyiciBaslat(query, `${secilenTarih} Tarihindeki Kayıtlar`);
+        }
+
+        // 4. Varsayılan Görünüm (Son 8 Kayıt)
+        function varsayilanYukle() {
+            const query = db.ref('moodlar/').orderByChild('timestamp').limitToLast(8);
+            dinleyiciBaslat(query, "Son Kayıtlar");
+        }
+
+        // 5. Listeyi Ekrana Basan Fonksiyon (Aynı kalıyor)
+        function renderList(snapshot, title) {
+            document.getElementById('listTitle').innerText = title;
+            const listElement = document.getElementById('history-list');
+            listElement.innerHTML = "";
+            
+            let data = [];
+            snapshot.forEach((snap) => { data.push(snap.val()); });
+            
+            if (data.length === 0) {
+                listElement.innerHTML = '<div class="no-data">Bu tarihte kayıt bulunamadı.</div>';
+                return;
+            }
+
+            data.reverse().forEach(item => {
+                listElement.innerHTML += `
+                    <div class="history-item">
+                        <strong>${item.durum}</strong>
+                        <span>${item.zaman}</span>
+                    </div>`;
+            });
+            document.getElementById('status').innerText = "Veriler güncel.";
+        }
+
+        // Uygulama başladığında varsayılanı yükle
+        varsayilanYukle();
     </script>
 </body>
 </html>
