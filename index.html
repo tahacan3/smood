@@ -57,7 +57,7 @@
             const label = document.getElementById('status');
             label.innerText = "Kaydediliyor...";
             
-            const ntfyKanal = "smood_bildirim_kanali"; // Android ntfy uygulamasında bu isme abone ol
+            const ntfyKanal = "SMood"; // Android ntfy uygulamasında bu isme abone ol
             const tarih = new Date().toLocaleString('tr-TR');
 
             try {
@@ -69,7 +69,7 @@
                 });
 
                 // 2. Android'e Bildirim Gönder (ntfy.sh)
-                await fetch(`https://ntfy.sh/SMood`, {
+                await fetch(`https://ntfy.sh/${ntfyKanal}`, {
                     method: 'POST',
                     body: `SMood Güncellemesi: ${deger}\nSaat: ${tarih}`,
                     headers: { 'Title': 'SMood Bildirimi', 'Tags': 'heart_eyes' }
@@ -91,5 +91,4 @@
         }
     </script>
 </body>
-
 </html>
