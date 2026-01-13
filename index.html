@@ -23,13 +23,13 @@
         .btn:active { transform: scale(0.9); opacity: 0.8; }
         
         /* Renk Grupları */
-        .ask { background: #ff4757; } /* Aşk/Yakınlık */
-        .ihtiyac { background: #ff7f50; } /* İlgi/Paylaşım */
-        .pozitif { background: #2ed573; } /* Mutluluk */
-        .notr { background: #747d8c; } /* Düşünsel */
-        .fiziksel { background: #ffa502; } /* Yorgunluk/Açlık */
-        .negatif { background: #54a0ff; } /* Üzüntü/Stres */
-        .gergin { background: #eb4d4b; } /* Kırgınlık/Öfke */
+        .ask { background: #ff4757; } 
+        .ihtiyac { background: #ff7f50; } 
+        .pozitif { background: #2ed573; } 
+        .notr { background: #747d8c; } 
+        .fiziksel { background: #ffa502; } 
+        .negatif { background: #54a0ff; } 
+        .gergin { background: #eb4d4b; } 
 
         .history { width: 100%; max-width: 500px; background: white; border-radius: 15px; padding: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); box-sizing: border-box; }
         input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid #f1f2f6; font-size: 14px; width: 100%; margin-bottom: 10px; box-sizing: border-box; outline: none; }
@@ -48,7 +48,7 @@
         <button class="btn ask" onclick="kaydet('Seni Çok Seviyorum ❤️')">Seni Seviyorum</button>
         <button class="btn ask" onclick="kaydet('Seni Çok Özledim 🥺')">Çok Özledim</button>
         <button class="btn ask" onclick="kaydet('Seni Görmek İstiyorum 😍')">Görmek İstiyorum</button>
-        <button class="btn ask" onclick="kaydet('Sana Sarılmak İstiyorum 🤗')">Sarılmak İstiyourm</button>
+        <button class="btn ask" onclick="kaydet('Sana Sarılmak İstiyorum 🤗')">Sarılmak İstiyorum</button>
         <button class="btn ask" onclick="kaydet('Sesini Duymak İstiyorum 😊')">Sesini Özledim</button>
 
         <button class="btn ihtiyac" onclick="kaydet('İlgi İstiyorum 👉👈')">İlgi İstiyorum</button>
@@ -105,27 +105,38 @@
         let activeRef = null;
 
         async function kaydet(mod) {
+            // 1. Haptic Feedback (Titreşim)
+            if (navigator.vibrate) {
+                navigator.vibrate(50); 
+            }
+
             const statusLabel = document.getElementById('status');
             statusLabel.innerText = "Gönderiliyor...";
             const tarih = new Date().toLocaleString('tr-TR');
-            
             const ntfyKanal = "SMood_2026"; 
 
+            // 2. ntfy Öncelik Belirleme Logic'i
+            // Kritik durumlar için önceliği 'high' (4) yapıyoruz.
+            const acilDurumlar = ['Üzgün', 'Kötü', 'Destek', 'Kırgın', 'Sinirli', 'Karışık'];
+            const isHighPriority = acilDurumlar.some(kelime => mod.includes(kelime));
+            const priorityLevel = isHighPriority ? "high" : "default";
+
             try {
-                // 1. Firebase'e Kaydet
+                // Firebase'e Kaydet
                 await db.ref('moodlar/').push({ 
                     durum: mod, 
                     zaman: tarih, 
                     timestamp: Date.now() 
                 });
 
-                // 2. ntfy.sh Bildirimi (Başına 'await' ekledik)
+                // ntfy.sh Bildirimi
                 const res = await fetch(`https://ntfy.sh/${ntfyKanal}`, { 
                     method: 'POST', 
-                    body: `Mesaj: ${mod}`, 
+                    body: `Yeni Durum: ${mod}`, 
                     headers: { 
-                        'Title': 'SMood Mesaji', 
-                        'Tags': 'heart' 
+                        'Title': 'SMood Güncellemesi', 
+                        'Priority': priorityLevel,
+                        'Tags': isHighPriority ? 'warning,heart' : 'heart'
                     } 
                 });
 
@@ -157,9 +168,22 @@
 
         function tariheGoreGetir(secilenTarih) {
             if (!secilenTarih) { varsayilanYukle(); return; }
-            const startOfDay = new Date(secilenTarih).setHours(0, 0, 0, 0);
-            const endOfDay = new Date(secilenTarih).setHours(23, 59, 59, 999);
-            const query = db.ref('moodlar/').orderByChild('timestamp').startAt(startOfDay).endAt(endOfDay);
+
+            // Tarihi "2026-01-13" formatından parçalara ayırıyoruz (Yıl, Ay, Gün)
+            const parcalar = secilenTarih.split('-');
+            const yil = parseInt(parcalar[0]);
+            const ay = parseInt(parcalar[1]) - 1; // JS'de aylar 0-11 arasıdır
+            const gun = parseInt(parcalar[2]);
+
+            // Yerel saat dilimine göre başlangıç ve bitişi oluşturuyoruz
+            const baslangic = new Date(yil, ay, gun, 0, 0, 0, 0).getTime();
+            const bitis = new Date(yil, ay, gun, 23, 59, 59, 999).getTime();
+
+            const query = db.ref('moodlar/')
+                            .orderByChild('timestamp')
+                            .startAt(baslangic)
+                            .endAt(bitis);
+
             dinleyiciBaslat(query, `${secilenTarih} Notları`);
         }
 
