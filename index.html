@@ -105,7 +105,6 @@
         let activeRef = null;
 
         async function kaydet(mod) {
-            // 1. Haptic Feedback (Titreşim)
             if (navigator.vibrate) {
                 navigator.vibrate(50); 
             }
@@ -115,21 +114,17 @@
             const tarih = new Date().toLocaleString('tr-TR');
             const ntfyKanal = "SMood_2026"; 
 
-            // 2. ntfy Öncelik Belirleme Logic'i
-            // Kritik durumlar için önceliği 'high' (4) yapıyoruz.
             const acilDurumlar = ['Üzgün', 'Kötü', 'Destek', 'Kırgın', 'Sinirli', 'Karışık'];
             const isHighPriority = acilDurumlar.some(kelime => mod.includes(kelime));
             const priorityLevel = isHighPriority ? "high" : "default";
 
             try {
-                // Firebase'e Kaydet
                 await db.ref('moodlar/').push({ 
                     durum: mod, 
                     zaman: tarih, 
                     timestamp: Date.now() 
                 });
 
-                // ntfy.sh Bildirimi
                 const res = await fetch(`https://ntfy.sh/${ntfyKanal}`, { 
                     method: 'POST', 
                     body: `Yeni Durum: ${mod}`, 
@@ -169,13 +164,11 @@
         function tariheGoreGetir(secilenTarih) {
             if (!secilenTarih) { varsayilanYukle(); return; }
 
-            // Tarihi "2026-01-13" formatından parçalara ayırıyoruz (Yıl, Ay, Gün)
             const parcalar = secilenTarih.split('-');
             const yil = parseInt(parcalar[0]);
-            const ay = parseInt(parcalar[1]) - 1; // JS'de aylar 0-11 arasıdır
+            const ay = parseInt(parcalar[1]) - 1;
             const gun = parseInt(parcalar[2]);
 
-            // Yerel saat dilimine göre başlangıç ve bitişi oluşturuyoruz
             const baslangic = new Date(yil, ay, gun, 0, 0, 0, 0).getTime();
             const bitis = new Date(yil, ay, gun, 23, 59, 59, 999).getTime();
 
@@ -217,3 +210,4 @@
     </script>
 </body>
 </html>
+
